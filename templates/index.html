@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Vulhub Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body.dark { background-color: #1e1e2f; color: #f5f5f5; }
+        body.light { background-color: #f5f5f5; color: #222; }
+        .card.dark { background-color: #2b2b3b; color: #f5f5f5; border: none; }
+        .card.light { background-color: #fff; color: #222; border: 1px solid #ddd; }
+        .card-header { font-weight: bold; }
+        .accordion-button { font-weight: 600; }
+        .badge { font-size: 0.8em; }
+    </style>
+</head>
+<body class="dark">
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>📦 Vulhub Project Manager</h1>
+        <button id="themeToggle" class="btn btn-outline-light">Toggle Theme</button>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- Base path form -->
+    <form method="POST" class="mb-4">
+        <div class="input-group">
+            <input type="text" name="base_path" value="{{ base_path }}" class="form-control">
+            <button type="submit" name="set_base_path" class="btn btn-primary">Set Base Path</button>
+        </div>
+    </form>
+
+    <form method="POST">
+        {% if runtimes|length > 1 %}
+            <div class="mb-3">
+                <label for="runtime" class="form-label">Select Runtime (Podman / Docker)</label>
+                <select name="runtime" id="runtime" class="form-select">
+                    {% for runtime in runtimes %}
+                        <option value="{{ runtime }}" {% if runtime == default_runtime %}selected{% endif %}>{{ runtime }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        {% else %}
+            <input type="hidden" name="runtime" value="{{ default_runtime }}">
+        {% endif %}
+
+        <div class="accordion" id="projectsAccordion">
+            {% for group, plist in projects.items() %}
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ loop.index }}">
+                        {{ group }} ({{ plist|length }} projects)
+                    </button>
+                </h2>
+                <div id="collapse{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#projectsAccordion">
+                    <div class="accordion-body">
+                        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-3">
+                            {% for project in plist %}
+                            <div class="col">
+                                <div class="card h-100">
+                                    <div class="card-header">{{ project.path }}</div>
+                                    <div class="card-body">
+                                        <input type="checkbox" name="projects" value="{{ project.path }}"> Select
+                                        <br>
+                                        {% if project.kinds|length > 1 %}
+                                            <label class="mt-2">Run as:</label>
+                                            <select name="kind_{{ project.path }}" class="form-select form-select-sm">
+                                                {% for k in project.kinds %}
+                                                    <option value="{{ k }}" {% if k == 'compose' %}selected{% endif %}>{{ k }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        {% else %}
+                                            <input type="hidden" name="kind_{{ project.path }}" value="{{ project.kinds[0] }}">
+                                            <span class="badge {% if project.kinds[0]=='compose' %}bg-info{% else %}bg-warning{% endif %}">
+                                                {{ project.kinds[0] }}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <button type="submit" class="btn btn-success mt-4">▶ Run Selected</button>
+    </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const themeToggle = document.getElementById('themeToggle');
+    const body = document.body;
+
+    if(localStorage.getItem('theme')) {
+        body.className = localStorage.getItem('theme');
+        updateButton();
+    }
+
+    themeToggle.addEventListener('click', () => {
+        body.classList.toggle('dark');
+        body.classList.toggle('light');
+        localStorage.setItem('theme', body.className);
+        updateButton();
+    });
+
+    function updateButton() {
+        if(body.classList.contains('dark')) {
+            themeToggle.className = "btn btn-outline-light";
+        } else {
+            themeToggle.className = "btn btn-outline-dark";
+        }
+    }
+</script>
+</body>
+</html>
+
